@@ -34,7 +34,7 @@ for snr in desired_SNRs:
     snr_to_offset[snr] = snr_index * signals_per_snr
 
 
-family_X, family_Y = {}, {}
+family_X, family_Y, len_family = {}, {}, {}
 
 for fam_name, mod_list in family_map.items():
     X_list = []
@@ -52,21 +52,6 @@ for fam_name, mod_list in family_map.items():
 
     family_X[fam_name] = np.concatenate(X_list)
     family_Y[fam_name] = np.concatenate(Y_list)
+    len_family[fam_name] = len(family_Y[fam_name])
 
-
-X_analog = family_X['analog']
-y_analog = family_Y['analog']
-y_analog_df = pd.DataFrame(y_analog)
-
-X_phase = family_X['phase']
-y_phase = family_Y['phase']
-y_phase_df = pd.DataFrame(y_phase)
-
-X_qam = family_X['qam']
-y_qam = family_Y['qam']
-y_qam_df = pd.DataFrame(y_qam)
-
-X_apsk = family_X['apsk']
-y_apsk = family_Y['apsk']
-y_apsk_df = pd.DataFrame(y_apsk)
 
