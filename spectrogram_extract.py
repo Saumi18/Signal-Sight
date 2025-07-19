@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import spectrogram
-from full_data_extract2 import family_X
+from full_data_extract import family_X
 import os
 
 os.makedirs('spectrograms', exist_ok=True)
