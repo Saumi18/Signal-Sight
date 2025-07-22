@@ -1,7 +1,5 @@
-
 import torch
 import torch.nn as nn
-import torchvision
 import torchvision.transforms as transforms
 import numpy as np
 
@@ -45,7 +43,7 @@ class Patchnormalize(Dataset):
         patch=self.transform(torch.from_numpy(patch))
       return patch,self.label
 
-analog_dataset=Patchnormalize(folder_path='folder where analog patch are stored',label=0,transform=transform)
+analog_dataset=Patchnormalize(folder_path = 'spectrograms/analog',label=0,transform=transform)
 train_loader=DataLoader(analog_dataset,batch_size=batch_size,shuffle=True)
 
 class ConvNet(nn.Module):
