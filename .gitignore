@@ -1,3 +1,4 @@
 .sigsight/
 __pycache__/
 dataset_radioml/
+spectrograms/

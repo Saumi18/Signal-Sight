@@ -1,16 +1,16 @@
 import numpy as np
 from scipy.signal import spectrogram
-from full_data_extract import family_X
+from generate_input_data import X
 import os
 
 os.makedirs('spectrograms', exist_ok=True)
 
 #parameters
 fs = 1000
-nperseg = 128
+nperseg = 128 
 noverlap = 64
 
-for family, signals in family_X.items():
+for family, signals in X.items():
     family_dir = os.path.join('spectrograms', family)
     os.makedirs(family_dir, exist_ok=True)
 
