@@ -19,33 +19,34 @@ transform=transforms.Compose([
 
 import os
 
-#edit Dataset/ Dataloader later.
+# edit Dataset/ Dataloader later.
+# a different method can be used if we do not plan on assiging labels to classes within a family.
 
 
-# class Patchnormalize(Dataset):
-#     def __init__(self, folder_path, transform=None):
-#         self.transform = transform #stores the transformation defined above
-#         self.patches = []          #stores the paths to the patches required 
-#         self.labels = []           #stores the corresponding labels
+class Patchnormalize(Dataset):
+    def __init__(self, folder_path, transform=None):
+        self.transform = transform #stores the transformation defined above
+        self.patches = []          #stores the paths to the patches required 
+        self.labels = []           #stores the corresponding labels
 
-#         self.label_map = {folder: idx for idx, folder in enumerate(sorted(os.listdir(folder_path)))}
-#         #this function sorts the subfolders and then assigns indices to them using enumerate
-#         for folder in os.listdir(folder_path):                  #accesses the spectrogram folder for this family
-#             path = os.path.join(folder_path, folder)            #navigates to the subfolders in this family ie apsk folder will have subfolders like 8apsk allat.
-#             for file in os.listdir(path):                       #from these subfolders it accesses the files and then appends them to patches[].
-#                 self.patches.append(os.path.join(path, file))   #then we assign labels.
-#                 self.labels.append(self.label_map[folder])
+        self.label_map = {folder: idx for idx, folder in enumerate(sorted(os.listdir(folder_path)))}
+        #this function sorts the subfolders and then assigns indices to them using enumerate
+        for folder in os.listdir(folder_path):                  #accesses the spectrogram folder for this family
+            path = os.path.join(folder_path, folder)            #navigates to the subfolders in this family ie apsk folder will have subfolders like 8apsk allat.
+            for file in os.listdir(path):                       #from these subfolders it accesses the files and then appends them to patches[].
+                self.patches.append(os.path.join(path, file))   #then we assign labels.
+                self.labels.append(self.label_map[folder])
 
-#     def __len__(self):
-#         return len(self.patches)
+    def __len__(self):
+        return len(self.patches)
 
-#     def __getitem__(self, index):
-#         patch = np.load(self.patches[index]).astype(np.float32)
-#         patch = np.expand_dims(patch, axis=0)
-#         if self.transform:
-#             patch = self.transform(torch.from_numpy(patch))
-#         label = self.labels[index]
-#         return patch, label
+    def __getitem__(self, index):
+        patch = np.load(self.patches[index]).astype(np.float32)
+        patch = np.expand_dims(patch, axis=0)
+        if self.transform:
+            patch = self.transform(torch.from_numpy(patch))
+        label = self.labels[index]
+        return patch, label
 
 
 #Partitions the dataset into training and validation
@@ -142,7 +143,7 @@ for epoch in range(num_epochs):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
-            _, predicted = torch.max(outputs.data, 1)
+            predicted_label = torch.argmax(output, dim=1).item() #outputs the predicted label or the most appropriate idex.
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
