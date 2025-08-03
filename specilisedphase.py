@@ -30,7 +30,7 @@ class Patchnormalize(Dataset):
         self.label_map = {folder: idx for idx, folder in enumerate(sorted(os.listdir(folder_path)))}
         #this function sorts the subfolders and then assigns indices to them using enumerate
         for folder in os.listdir(folder_path):                  #accesses the spectrogram folder for this family
-            path = os.path.join(folder_path, folder)            #navigates to the subfolders in this family ie apsk folder will have subfolders like 8apsk allat.
+            path = os.path.join(folder_path, folder)            #navigates to the subfolders in this family ie phase folder will have subfolders like phase allat.
             for file in os.listdir(path):                       #from these subfolders it accesses the files and then appends them to patches[].
                 self.patches.append(os.path.join(path, file))   #then we assign labels.
                 self.labels.append(self.label_map[folder])
@@ -48,12 +48,12 @@ class Patchnormalize(Dataset):
 
 
 #Partitions the dataset into training and validation
-apsk_dataset = Patchnormalize(folder_path='spectrograms', transform=transform)
+phase_dataset = Patchnormalize(folder_path='spectrograms', transform=transform)
 val_split = 0.2 
-val_size = int(len(apsk_dataset) * val_split)
-train_size = len(apsk_dataset) - val_size
+val_size = int(len(phase_dataset) * val_split)
+train_size = len(phase_dataset) - val_size
 
-train_dataset, val_dataset = random_split(apsk_dataset, [train_size, val_size])
+train_dataset, val_dataset = random_split(phase_dataset, [train_size, val_size])
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -92,8 +92,8 @@ class ConvNet(nn.Module):
 #x is the batch of inputs
 
   
-num_apsk_classes = len(os.listdir('spectrograms'))
-model = ConvNet(num_classes=num_apsk_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
+num_phase_classes = len(os.listdir('spectrograms'))
+model = ConvNet(num_classes=num_phase_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
 criterion = nn.CrossEntropyLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
