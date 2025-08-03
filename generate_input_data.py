@@ -12,7 +12,8 @@ mix_4 = 19660   # approx 30%
 
 
 X = {}
-Y = {}   
+Y_special = {}
+Y_router = []
 
 for target_family in family_names:
     X_fam = []
@@ -22,6 +23,7 @@ for target_family in family_names:
         idx = np.random.randint(len_family[target_family])
         X_fam.append(family_X[target_family][idx])
         Y_targ_fam.append(family_Y[target_family][idx])
+        Y_router.append([family_names.index(target_family)])
 
 
     for _ in range(mix_2):
@@ -46,6 +48,11 @@ for target_family in family_names:
 
         else:
             Y_targ_fam.append(family_Y[chosen_fam_arr[1]][ind2])
+        
+        rout_label = []
+        for fam in chosen_fam_arr:
+            rout_label.append(family_names.index(fam))
+        Y_router.append(rout_label)
 
 
     for _ in range(mix_3):
@@ -78,6 +85,10 @@ for target_family in family_names:
         label = np.clip(label, 0, 1)
         Y_targ_fam.append(label)
 
+        rout_label = []
+        for fam in chosen_fam_arr:
+            rout_label.append(family_names.index(fam))
+        Y_router.append(rout_label)
 
     for _ in range(mix_4):
         chosen_fam_arr = np.random.choice(family_names, size=3, replace=False).tolist()
@@ -112,10 +123,15 @@ for target_family in family_names:
         label = np.clip(label, 0, 1)
         Y_targ_fam.append(label)
 
+        rout_label = []
+        for fam in chosen_fam_arr:
+            rout_label.append(family_names.index(fam))
+        Y_router.append(rout_label)
+
 
     X[target_family] = np.array(X_fam)
-    Y[target_family] = np.array(Y_targ_fam)
+    Y_special[target_family] = np.array(Y_targ_fam)
 
 print(X['analog'].shape)
-print(Y['qam'].shape)
+print(Y_special['qam'].shape)
 

@@ -1,6 +1,5 @@
 import h5py
 import numpy as np
-import pandas as pd
 
 
 dataset_file = h5py.File("dataset_radioml/radioml2018/versions/2/GOLD_XYZ_OSC.0001_1024.hdf5", "r")
@@ -53,5 +52,3 @@ for fam_name, mod_list in family_map.items():
     family_X[fam_name] = np.concatenate(X_list)
     family_Y[fam_name] = np.concatenate(Y_list)
     len_family[fam_name] = len(family_Y[fam_name])
-
-
