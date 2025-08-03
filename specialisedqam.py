@@ -48,12 +48,12 @@ class Patchnormalize(Dataset):
 
 
 #Partitions the dataset into training and validation
-apsk_dataset = Patchnormalize(folder_path='spectrograms', transform=transform)
+qam_dataset = Patchnormalize(folder_path='spectrograms', transform=transform)
 val_split = 0.2 
-val_size = int(len(apsk_dataset) * val_split)
-train_size = len(apsk_dataset) - val_size
+val_size = int(len(qam_dataset) * val_split)
+train_size = len(qam_dataset) - val_size
 
-train_dataset, val_dataset = random_split(apsk_dataset, [train_size, val_size])
+train_dataset, val_dataset = random_split(qam_dataset, [train_size, val_size])
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
