@@ -18,8 +18,8 @@ def extract_qam_patch(spectrogram, patch_shape=(64, 32), lam=0.2):
                 best_y, best_x = y, x
     return spectrogram[best_y:best_y+ph, best_x:best_x+pw], (best_y,best_x)
 
-input_dir = '/home/taksh/Summer_RAID_Project/spectrograms/qam'
-output_dir = '/home/taksh/Summer_RAID_Project/patches/qam_patches'
+input_dir = 'spectrograms/qam'
+output_dir = 'patches/qam_patches'
 os.makedirs(output_dir, exist_ok=True)
 
 patch_shape = (64, 32)

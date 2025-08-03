@@ -10,10 +10,8 @@ num_epochs=100
 batch_size=64
 learning_rate=0.0001
 
-#transforms the images randomly and normalizes their values.
+#normalizes image values.
 transform=transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
     transforms.Normalize(mean=[0.5],std=[0.5])
 ])
 
@@ -143,9 +141,9 @@ for epoch in range(num_epochs):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
-            predicted_label = torch.argmax(output, dim=1).item() #outputs the predicted label or the most appropriate idex.
+            predicted_label = torch.argmax(outputs, dim=1).item() #outputs the predicted label or the most appropriate index.
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += (predicted_label == labels).sum().item()
 
     avg_val_loss = val_loss / len(val_loader)
     val_accuracy = 100 * correct / total

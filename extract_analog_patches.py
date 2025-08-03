@@ -33,8 +33,8 @@ def extract_analog_patch(spectrogram, patch_shape=(64, 32), lam_am=0.1, lam_fm=0
                 best_y, best_x = y, x
     return spectrogram[best_y:best_y+ph, best_x:best_x+pw], (best_y, best_x)
 
-input_dir = '/home/taksh/Summer_RAID_Project/spectrograms/analog'
-output_dir = '/home/taksh/Summer_RAID_Project/patches/analog_patches'
+input_dir = 'spectrograms/analog'
+output_dir = 'patches/analog_patches'
 os.makedirs(output_dir, exist_ok=True)
 
 patch_shape = (64, 32)
