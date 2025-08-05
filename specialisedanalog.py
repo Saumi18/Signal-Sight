@@ -43,7 +43,9 @@ class Patchnormalize(Dataset):
         patch = np.expand_dims(patch, axis=0)
         if self.transform:
             patch = self.transform(torch.from_numpy(patch))
-        label = self.labels[index]
+        label_idx = self.labels[index]
+        label=torch.zeros(len(self.label_map),dtype=torch.float32)
+        label[label_idx]=1.0
         return patch, label
 
 
@@ -94,7 +96,7 @@ class ConvNet(nn.Module):
   
 num_analog_classes = len(os.listdir('spectrograms'))
 model = ConvNet(num_classes=num_analog_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
-criterion = nn.CrossEntropyLoss()                                   #uses softmax loss
+criterion = nn.BCEwithLogitsLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
 for epoch in range(num_epochs):
@@ -141,8 +143,10 @@ for epoch in range(num_epochs):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
-            predicted_label = torch.argmax(outputs, dim=1).item() #outputs the predicted label or the most appropriate index.
-            total += labels.size(0)
+            # predicted_label = torch.argmax(outputs, dim=1).item() #outputs the predicted label or the most appropriate index
+            prob=torch.sigmoid(outputs)
+            predicted_label=(prob>0.5).float()
+            total += labels.numel()
             correct += (predicted_label == labels).sum().item()
 
     avg_val_loss = val_loss / len(val_loader)
@@ -163,5 +167,8 @@ def predict(model, input_patch):
     with torch.no_grad():
         input_patch = input_patch.unsqueeze(0).to(device)  # Add batch dimension
         output = model(input_patch)
-        predicted_label = torch.argmax(output, dim=1).item()
-    return predicted_label
+        probs = torch.sigmoid(output)                      
+        predicted_labels = (probs > 0.5).int().squeeze()
+    return predicted_labels.cpu().tolist()
+        # predicted_label = torch.argmax(output, dim=1).item()
+    #return predicted_label
