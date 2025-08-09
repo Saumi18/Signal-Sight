@@ -62,32 +62,53 @@ val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
 
+import torch
+import torch.nn as nn
+
 class ConvNet(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
         self.conv = nn.Sequential(
+            # Block 1
             nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Dropout(0.2),
+
+            # Block 2
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Dropout(0.3),
-            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+
+            # Block 3
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
-        self.fc = nn.Sequential(
-            nn.Linear(64*8*8, 256),
-            nn.ReLU(),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.4)
         )
 
-    def forward(self,x):
-     x=self.conv(x)            #applies the conv layers to the model.
-     x = x.view(x.size(0), -1) #flattens the x into a 1D matrix.
-     x=self.fc(x)              #fully connects the rest of the nn.
-     return x
+        # Global Average Pooling
+        self.gap = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(128, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.gap(x)            # (batch, channels, 1, 1)
+        x = torch.flatten(x, 1)    # Flatten to (batch, channels)
+        x = self.fc(x)
+        return x
+
 
 #forward describes the flow of the input data.
 #self refers to the instance of convnet
@@ -116,7 +137,7 @@ for epoch in range(num_epochs):
         optimizer.step()                    #updates weights 
 
         running_loss += loss.item()         
-        if (i+1) % 10 == 0:  #added + 1 to make it easier to understand steps. Every 10 steps this will print the loss.
+        if (i+1) % 100 == 0:  #added + 1 to make it easier to understand steps. Every 100 steps this will print the loss.
             print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
 
@@ -160,6 +181,19 @@ for epoch in range(num_epochs):
           f"Train Loss: {avg_train_loss:.4f} | "
           f"Val Loss: {avg_val_loss:.4f} | "
           f"Val Accuracy: {val_accuracy:.2f}%\n")
+
+os.makedirs("checkpoints", exist_ok=True)
+# Save full checkpoint
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'num_epochs': num_epochs,
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'final_val_accuracy': val_accuracy,
+}, "checkpoints/apsk_final_checkpoint.pth")
+
+print("Final checkpoint saved at checkpoints/apsk_final_checkpoint.pth")
 
 
 
