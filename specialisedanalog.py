@@ -2,7 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 import numpy as np
+import os
 from torch.utils.data import Dataset, DataLoader, random_split
+
+from data_gen import FamSpectDataset
+from data_augmentation import Y_special
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -15,42 +19,9 @@ transform=transforms.Compose([
     transforms.Normalize(mean=[0.5],std=[0.5])
 ])
 
-import os
-
-# edit Dataset/ Dataloader later.
-# a different method can be used if we do not plan on assiging labels to classes within a family.
-
-
-class Patchnormalize(Dataset):
-    def __init__(self, folder_path, transform=None):
-        self.transform = transform #stores the transformation defined above
-        self.patches = []          #stores the paths to the patches required 
-        self.labels = []           #stores the corresponding labels
-
-        self.label_map = {folder: idx for idx, folder in enumerate(sorted(os.listdir(folder_path)))}
-        #this function sorts the subfolders and then assigns indices to them using enumerate
-        for folder in os.listdir(folder_path):                  #accesses the spectrogram folder for this family
-            path = os.path.join(folder_path, folder)            #navigates to the subfolders in this family ie analog folder will have subfolders like analog allat.
-            for file in os.listdir(path):                       #from these subfolders it accesses the files and then appends them to patches[].
-                self.patches.append(os.path.join(path, file))   #then we assign labels.
-                self.labels.append(self.label_map[folder])
-
-    def __len__(self):
-        return len(self.patches)
-
-    def __getitem__(self, index):
-        patch = np.load(self.patches[index]).astype(np.float32)
-        patch = np.expand_dims(patch, axis=0)
-        if self.transform:
-            patch = self.transform(torch.from_numpy(patch))
-        label_idx = self.labels[index]
-        label=torch.zeros(len(self.label_map),dtype=torch.float32)
-        label[label_idx]=1.0
-        return patch, label
-
 
 #Partitions the dataset into training and validation
-analog_dataset = Patchnormalize(folder_path='spectrograms', transform=transform)
+analog_dataset = FamSpectDataset(folder_path='spectrograms/analog', labels=Y_special['analog'],transform=transform)
 val_split = 0.2 
 val_size = int(len(analog_dataset) * val_split)
 train_size = len(analog_dataset) - val_size
@@ -62,26 +33,52 @@ val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
 
+import torch
+import torch.nn as nn
+
 class ConvNet(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
         self.conv = nn.Sequential(
+            # Block 1
             nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Dropout(0.2),
+
+            # Block 2
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Dropout(0.3),
-            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+
+            # Block 3
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
+            nn.Dropout(0.4)
         )
+
+        # Global Average Pooling
+        self.gap = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(64*8*8, 256),
+            nn.Linear(64, 128),
             nn.ReLU(),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.5),
+            nn.Linear(128, num_classes)
         )
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.gap(x)            # (batch, channels, 1, 1)
+        x = torch.flatten(x, 1)    # Flatten to (batch, channels)
+        x = self.fc(x)
+        return x
 
     def forward(self,x):
      x=self.conv(x)            #applies the conv layers to the model.
@@ -89,14 +86,11 @@ class ConvNet(nn.Module):
      x=self.fc(x)              #fully connects the rest of the nn.
      return x
 
-#forward describes the flow of the input data.
-#self refers to the instance of convnet
-#x is the batch of inputs
 
   
-num_analog_classes = len(os.listdir('spectrograms'))
+num_analog_classes = Y_special['analog'].shape[1]
 model = ConvNet(num_classes=num_analog_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
-criterion = nn.BCEwithLogitsLoss()                                   #uses softmax loss
+criterion = nn.BCEWithLogitsLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
 for epoch in range(num_epochs):
@@ -116,11 +110,12 @@ for epoch in range(num_epochs):
         optimizer.step()                    #updates weights 
 
         running_loss += loss.item()         
-        if (i+1) % 10 == 0:  #added + 1 to make it easier to understand steps. Every 10 steps this will print the loss.
+        if (i+1) % 100 == 0:  #added + 1 to make it easier to understand steps. Every 100 steps this will print the loss.
             print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
 
     print(f'Epoch [{epoch+1}/{num_epochs}] Average Loss: {running_loss/len(train_loader):.4f}')
+
 
     avg_train_loss = running_loss / len(train_loader)
 
@@ -158,6 +153,19 @@ for epoch in range(num_epochs):
           f"Val Loss: {avg_val_loss:.4f} | "
           f"Val Accuracy: {val_accuracy:.2f}%\n")
 
+
+os.makedirs("checkpoints", exist_ok=True)
+# Save full checkpoint
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'num_epochs': num_epochs,
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'final_val_accuracy': val_accuracy,
+}, "checkpoints/analog_final_checkpoint.pth")
+
+print("Final checkpoint saved at checkpoints/analog_final_checkpoint.pth")
 
 
 # Testing Phase       
