@@ -82,7 +82,7 @@ class ConvNet(nn.Module):
 
 
   
-num_analog_classes = Y_special['phase'].shape[1]
+num_phase_classes = Y_special['phase'].shape[1]
 model = ConvNet(num_classes=num_apsk_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
 criterion = nn.BCEWithLogitsLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
