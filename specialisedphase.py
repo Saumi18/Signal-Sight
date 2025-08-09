@@ -8,26 +8,21 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from data_gen import FamSpectDataset
 from data_augmentation import Y_special
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-num_epochs = 100
-batch_size = 64
-learning_rate = 0.0001
+num_epochs=100
+batch_size=64
+learning_rate=0.0001
 
-# Normalizes image values
-transform = transforms.Compose([
-    transforms.Normalize(mean=[0.5], std=[0.5])
+#normalizes image values.
+transform=transforms.Compose([
+    transforms.Normalize(mean=[0.5],std=[0.5])
 ])
 
-# Dataset for PHASE signals
-phase_dataset = FamSpectDataset(
-    folder_path='spectrograms/phase',
-    labels=Y_special['phase'],
-    transform=transform
-)
 
-# Partition into training and validation
-val_split = 0.2
+#Partitions the dataset into training and validation
+phase_dataset = FamSpectDataset(folder_path='spectrograms/phase', labels=Y_special['phase'],transform=transform)
+val_split = 0.2 
 val_size = int(len(phase_dataset) * val_split)
 train_size = len(phase_dataset) - val_size
 
@@ -37,7 +32,10 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
-# Model Definition
+
+import torch
+import torch.nn as nn
+
 class ConvNet(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
@@ -83,35 +81,43 @@ class ConvNet(nn.Module):
         return x
 
 
-# Training setup
-num_phase_classes = Y_special['phase'].shape[1]
-model = ConvNet(num_classes=num_phase_classes).to(device)
-criterion = nn.BCEWithLogitsLoss()
+  
+num_analog_classes = Y_special['phase'].shape[1]
+model = ConvNet(num_classes=num_apsk_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
+criterion = nn.BCEWithLogitsLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
 for epoch in range(num_epochs):
 
-    # Training Phase
+    #Training Phase
+
     model.train()
     running_loss = 0.0
     for i, (inputs, labels) in enumerate(train_loader):
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        optimizer.zero_grad()               #resets gradient from previous batches.
+        outputs = model(inputs)             
+        loss = criterion(outputs, labels)   #calculates the loss.
+        loss.backward()                     #backpropagates to check how weights affect the previous layers.
+        optimizer.step()                    #updates weights 
 
-        running_loss += loss.item()
-        if (i + 1) % 100 == 0:
+        running_loss += loss.item()         
+        if (i+1) % 100 == 0:  #added + 1 to make it easier to understand steps. Every 100 steps this will print the loss.
             print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
-    avg_train_loss = running_loss / len(train_loader)
-    print(f'Epoch [{epoch+1}/{num_epochs}] Average Loss: {avg_train_loss:.4f}')
 
-    # Validation Phase
+    print(f'Epoch [{epoch+1}/{num_epochs}] Average Loss: {running_loss/len(train_loader):.4f}')
+
+
+    avg_train_loss = running_loss / len(train_loader)
+
+
+
+
+    #Validation phase
+   
     model.eval()
     val_loss = 0.0
     correct = 0
@@ -126,13 +132,15 @@ for epoch in range(num_epochs):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
-            prob = torch.sigmoid(outputs)
-            predicted_label = (prob > 0.5).float()
+            # predicted_label = torch.argmax(outputs, dim=1).item() #outputs the predicted label or the most appropriate index
+            prob=torch.sigmoid(outputs)
+            predicted_label=(prob>0.5).float()
             total += labels.numel()
             correct += (predicted_label == labels).sum().item()
 
     avg_val_loss = val_loss / len(val_loader)
     val_accuracy = 100 * correct / total
+
 
     print(f"Epoch [{epoch+1}/{num_epochs}] "
           f"Train Loss: {avg_train_loss:.4f} | "
@@ -140,8 +148,8 @@ for epoch in range(num_epochs):
           f"Val Accuracy: {val_accuracy:.2f}%\n")
 
 
-# Save model checkpoint
 os.makedirs("checkpoints", exist_ok=True)
+# Save full checkpoint
 torch.save({
     'model_state_dict': model.state_dict(),
     'optimizer_state_dict': optimizer.state_dict(),
@@ -154,12 +162,15 @@ torch.save({
 print("Final checkpoint saved at checkpoints/phase_final_checkpoint.pth")
 
 
-# Testing / Prediction function
+# Testing Phase       
+
 def predict(model, input_patch):
     model.eval()
     with torch.no_grad():
         input_patch = input_patch.unsqueeze(0).to(device)  # Add batch dimension
         output = model(input_patch)
-        probs = torch.sigmoid(output)
+        probs = torch.sigmoid(output)                      
         predicted_labels = (probs > 0.5).int().squeeze()
     return predicted_labels.cpu().tolist()
+        # predicted_label = torch.argmax(output, dim=1).item()
+    #return predicted_label
