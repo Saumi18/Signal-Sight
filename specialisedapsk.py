@@ -117,7 +117,7 @@ class ConvNet(nn.Module):
   
 num_apsk_classes = len(os.listdir('spectrograms'))
 model = ConvNet(num_classes=num_apsk_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
-criterion = nn.BCEwithLogitsLoss()                                   #uses softmax loss
+criterion = nn.BCEWithLogitsLoss()                                   #uses softmax loss
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
 for epoch in range(num_epochs):
