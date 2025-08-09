@@ -80,12 +80,6 @@ class ConvNet(nn.Module):
         x = self.fc(x)
         return x
 
-    def forward(self,x):
-     x=self.conv(x)            #applies the conv layers to the model.
-     x = x.view(x.size(0), -1) #flattens the x into a 1D matrix.
-     x=self.fc(x)              #fully connects the rest of the nn.
-     return x
-
 
   
 num_analog_classes = Y_special['analog'].shape[1]
