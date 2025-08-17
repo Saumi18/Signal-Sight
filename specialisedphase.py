@@ -1,207 +1,176 @@
-import os
-import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms as transforms
-from generate_input_data import Y_special
+import numpy as np
+import os
+from torch.utils.data import Dataset, DataLoader, random_split
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from data_gen import FamSpectDataset
+from data_augmentation import Y_special
 
-family_name = "phase"
-phase_modulations = ['BPSK', 'QPSK', '8PSK', '16PSK', '32PSK']
-num_classes = len(phase_modulations)
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def load_phase_spectrograms_and_labels():
-    spectrograms_dir = "spectrograms"
-    phase_dir = os.path.join(spectrograms_dir, family_name)
+num_epochs=100
+batch_size=64
+learning_rate=0.0001
 
-    all_spectrograms = []
-    all_filenames = []
-
-    for filename in sorted(os.listdir(phase_dir)):
-        if filename.endswith('.npy'):
-            spec_path = os.path.join(phase_dir, filename)
-            spec = np.load(spec_path)
-            all_spectrograms.append(spec)
-            all_filenames.append(filename)
-    
-    return np.array(all_spectrograms), all_filenames
+#normalizes image values.
+transform=transforms.Compose([
+    transforms.Normalize(mean=[0.5],std=[0.5])
+])
 
 
-print(f"Loading {family_name} spectrograms...")
-all_X, filenames = load_phase_spectrograms_and_labels()
-all_Y = Y_special[family_name]  
+#Partitions the dataset into training and validation
+phase_dataset = FamSpectDataset(folder_path='spectrograms/phase', labels=Y_special['phase'],transform=transform)
+val_split = 0.2 
+val_size = int(len(phase_dataset) * val_split)
+train_size = len(phase_dataset) - val_size
 
-print(f"Loaded {len(all_X)} {family_name} spectrograms with shape {all_X[0].shape}")
-print(f"Labels shape: {all_Y.shape}")
-print(f"Sample filenames: {filenames[:5]}")
-print(f"Sample labels: {all_Y[:5]}")
+train_dataset, val_dataset = random_split(phase_dataset, [train_size, val_size])
 
-normalize = transforms.Normalize(mean=[0.5], std=[0.5])
-
-class PhaseSpectrogramDataset(Dataset):
-    def __init__(self, X, Y, transform=None):
-        self.X = X
-        self.Y = Y
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.X)
-
-    def __getitem__(self, idx):
-        spec = self.X[idx]
-        if spec.ndim == 2:  
-            spec = np.expand_dims(spec, axis=0)
-        
-        spec = torch.from_numpy(spec.astype(np.float32))
-        if self.transform:
-            spec = self.transform(spec)
-        
-        label = torch.tensor(self.Y[idx], dtype=torch.float32)
-        return spec, label
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
-dataset = PhaseSpectrogramDataset(all_X, all_Y, transform=normalize)
-val_size = int(0.2 * len(dataset))
-train_size = len(dataset) - val_size
 
-train_set, val_set = random_split(dataset, [train_size, val_size])
-train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=64, shuffle=False)
+import torch
+import torch.nn as nn
 
-print(f"Training samples: {train_size}, Validation samples: {val_size}")
-
-class PhaseSpecializedCNN(nn.Module):
+class ConvNet(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            # Block 1
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Dropout(0.25),
-            
+            nn.Dropout(0.2),
+
+            # Block 2
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Dropout(0.3),
+
+            # Block 3
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Dropout(0.25),
-            
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            nn.Dropout(0.25)
-        )       
-          
+            nn.Dropout(0.4)
+        )
+
+        # Global Average Pooling
+        self.gap = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(128 * 16 * 1, 512),
+            nn.Linear(64, 128),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, num_classes)
+            nn.Linear(128, num_classes)
         )
 
     def forward(self, x):
         x = self.conv(x)
-        x = torch.flatten(x, 1)
+        x = self.gap(x)            # (batch, channels, 1, 1)
+        x = torch.flatten(x, 1)    # Flatten to (batch, channels)
         x = self.fc(x)
         return x
 
-model = PhaseSpecializedCNN(num_classes).to(device)
-criterion = nn.BCEWithLogitsLoss() 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
-print(f"Phase specialized model created and moved to {device}")
+  
+num_phase_classes = Y_special['phase'].shape[1]
+model = ConvNet(num_classes=num_apsk_classes).to(device)            #num_classes is the total classes we will get as outputs after softmax
+criterion = nn.BCEWithLogitsLoss()                                   #uses softmax loss
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.00001)
 
-num_epochs = 100
+for epoch in range(num_epochs):
 
-print("Starting Phase specialized CNN training...")
-for epoch in range(1, num_epochs + 1):
+    #Training Phase
+
     model.train()
-    train_loss = 0.0
+    running_loss = 0.0
     for i, (inputs, labels) in enumerate(train_loader):
-        inputs, labels = inputs.to(device), labels.to(device)
-        
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        
-        train_loss += loss.item()
-        
-        if (i + 1) % 10 == 0:
-            print(f'Epoch [{epoch}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
-    
-    avg_train_loss = train_loss / len(train_loader)
-    
-    
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        optimizer.zero_grad()               #resets gradient from previous batches.
+        outputs = model(inputs)             
+        loss = criterion(outputs, labels)   #calculates the loss.
+        loss.backward()                     #backpropagates to check how weights affect the previous layers.
+        optimizer.step()                    #updates weights 
+
+        running_loss += loss.item()         
+        if (i+1) % 100 == 0:  #added + 1 to make it easier to understand steps. Every 100 steps this will print the loss.
+            print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
+
+
+    print(f'Epoch [{epoch+1}/{num_epochs}] Average Loss: {running_loss/len(train_loader):.4f}')
+
+
+    avg_train_loss = running_loss / len(train_loader)
+
+
+
+
+    #Validation phase
+   
     model.eval()
     val_loss = 0.0
     correct = 0
     total = 0
-    
+
     with torch.no_grad():
         for inputs, labels in val_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
-            
-            
-            probs = torch.sigmoid(outputs)
-            preds = (probs > 0.5).float()
-            correct += (preds == labels).sum().item()
+
+            # predicted_label = torch.argmax(outputs, dim=1).item() #outputs the predicted label or the most appropriate index
+            prob=torch.sigmoid(outputs)
+            predicted_label=(prob>0.5).float()
             total += labels.numel()
-    
+            correct += (predicted_label == labels).sum().item()
+
     avg_val_loss = val_loss / len(val_loader)
     val_accuracy = 100 * correct / total
-    
-    print(f"Epoch [{epoch}/{num_epochs}] Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Val Acc: {val_accuracy:.2f}%")
 
 
-torch.save(model.state_dict(), 'phase_specialized_cnn_model.pth')
-print("Phase specialized model saved as phase_specialized_cnn_model.pth")
+    print(f"Epoch [{epoch+1}/{num_epochs}] "
+          f"Train Loss: {avg_train_loss:.4f} | "
+          f"Val Loss: {avg_val_loss:.4f} | "
+          f"Val Accuracy: {val_accuracy:.2f}%\n")
 
-def predict_phase_modulations(spectrogram_path):
+
+os.makedirs("checkpoints", exist_ok=True)
+# Save full checkpoint
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'num_epochs': num_epochs,
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'final_val_accuracy': val_accuracy,
+}, "checkpoints/phase_final_checkpoint.pth")
+
+print("Final checkpoint saved at checkpoints/phase_final_checkpoint.pth")
+
+
+# Testing Phase       
+
+def predict(model, input_patch):
     model.eval()
-    
-    
-    spec = np.load(spectrogram_path).astype(np.float32)
-    if spec.ndim == 2:
-        spec = np.expand_dims(spec, axis=0)  
-    
-    
-    spec_tensor = torch.from_numpy(spec).unsqueeze(0) 
-    spec_tensor = normalize(spec_tensor).to(device)
-    
     with torch.no_grad():
-        outputs = model(spec_tensor)
-        probs = torch.sigmoid(outputs)
-        preds = (probs > 0.5).cpu().numpy().flatten()
-
-
-    predicted_modulations = [phase_modulations[i] for i, pred in enumerate(preds) if pred == 1]
-    return predicted_modulations
-
-def predict_phase_modulations_from_array(spectrogram_array):
-    model.eval()
-    
-    spec = spectrogram_array.astype(np.float32)
-    if spec.ndim == 2:
-        spec = np.expand_dims(spec, axis=0)  
-    
-    spec_tensor = torch.from_numpy(spec).unsqueeze(0)  
-    spec_tensor = normalize(spec_tensor).to(device)
-    
-    with torch.no_grad():
-        outputs = model(spec_tensor)
-        probs = torch.sigmoid(outputs)
-        preds = (probs > 0.5).cpu().numpy().flatten()
-
-    predicted_modulations = [phase_modulations[i] for i, pred in enumerate(preds) if pred == 1]
-    return predicted_modulations
-
-print("Phase specialized CNN training complete.")
-
+        input_patch = input_patch.unsqueeze(0).to(device)  # Add batch dimension
+        output = model(input_patch)
+        probs = torch.sigmoid(output)                      
+        predicted_labels = (probs > 0.5).int().squeeze()
+    return predicted_labels.cpu().tolist()
+        # predicted_label = torch.argmax(output, dim=1).item()
+    #return predicted_label
