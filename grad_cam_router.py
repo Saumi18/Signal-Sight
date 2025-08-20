@@ -45,8 +45,8 @@ def backward_hook(module, grad_input, grad_output):
     global grads
     grads = grad_output[0].detach()
 
-model.conv[8].registered_forward_hook(forward_hook)
-model.conv[8].registered_forward_hook(backward_hook)
+model.conv[8].register_forward_hook(forward_hook)
+model.conv[8].register_backward_hook(backward_hook)
 spec= '/content/Signal-Sight/spectrogram_extract.py'
 spec= np.expand_dims(spec, axis=0)  # add channel dim
 spec = torch.tensor(spec, dtype=torch.float32).unsqueeze(0).to(device)
