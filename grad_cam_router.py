@@ -47,9 +47,11 @@ def backward_hook(module, grad_input, grad_output):
 
 model.conv[8].register_forward_hook(forward_hook)
 model.conv[8].register_backward_hook(backward_hook)
-spec= '/content/Signal-Sight/spectrogram_extract.py'
-spec= np.expand_dims(spec, axis=0)  # add channel dim
-spec = torch.tensor(spec, dtype=torch.float32).unsqueeze(0).to(device)
+
+spec = np.load("/content/Signal-Sight/example_spec.npy")   # or output of your spectrogram extractor
+spec = np.expand_dims(spec, axis=0)  # [1, F, T]
+spec = torch.tensor(spec, dtype=torch.float32).unsqueeze(0).to(device)  # [B=1, C=1, F, T]
+
 
 #logits = model(spec)
 
@@ -60,34 +62,44 @@ spec = torch.tensor(spec, dtype=torch.float32).unsqueeze(0).to(device)
 # forward pass through RouterCNN
 logits = model(spec)   # logits = raw outputs (tensor)
 
-target_class = logits.argmax(dim=1).item() # family index for Router
-score = logits[0, target_class]
+#target_class = logits.argmax(dim=1).item() # family index for Router
+#score = logits[0, target_class]
 
-model.zero_grad()
-score.backward()
+#model.zero_grad()
+#score.backward()
 
-weights = grads.mean(dim=(2, 3))[0]   # Shape: [C]
+num_classes = logits.shape[1]
+cams = {}
 
-# Weighted sum of activations
-cam = torch.zeros(activations.shape[2:], dtype=torch.float32).to(device)  # [H, W]
-for c, w in enumerate(weights):
-    cam += w * activations[0, c, :, :]   # weighted feature map
+for target_class in range(num_classes):
+    model.zero_grad()
+    score = logits[0, target_class]
+    score.backward(retain_graph=True)
 
-cam -= cam.min()
-cam /= cam.max()
+    weights = grads.mean(dim=(2, 3))[0]   # [C]
+    cam = torch.zeros(activations.shape[2:], dtype=torch.float32).to(device)
+    for c, w in enumerate(weights):
+        cam += w * activations[0, c, :, :]
+    cam = torch.relu(cam)   # ReLU
+    cam -= cam.min()
+    cam /= cam.max() + 1e-8
 
-# Resize CAM to match input spectrogram size
-cam = torch.nn.functional.interpolate(
-    cam.unsqueeze(0).unsqueeze(0),  # [1,1,H,W]
-    size=spec.shape[2:],             # match input [H_input, W_input]
-    mode='bilinear',
-    align_corners=False
-)
-cam = cam.squeeze().cpu().numpy()  # final CAM: 2D heatmap
+    cam = torch.nn.functional.interpolate(
+        cam.unsqueeze(0).unsqueeze(0),
+        size=spec.shape[2:],
+        mode='bilinear',
+        align_corners=False
+    )
+    cams[target_class] = cam.squeeze().cpu().numpy()
+
 
 import matplotlib.pyplot as plt
 
-plt.imshow(spec.squeeze().cpu().numpy(), cmap='gray')
-plt.imshow(cam, cmap='jet', alpha=0.4)  # overlay
-plt.colorbar()
-plt.show()
+for class, cam in cams.items():
+    plt.figure()
+    plt.title(f"Grad-CAM for class {class}")
+    plt.imshow(spec.squeeze().cpu().numpy(), cmap='gray')
+    plt.imshow(cam, cmap='jet', alpha=0.4)
+    plt.colorbar()
+    plt.show()
+
