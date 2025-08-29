@@ -1,12 +1,12 @@
 # Signal-Sight
 A Deep Learning model for real-time wireless signal classification
 
-##OVERVIEW
+## OVERVIEW
 -We use the RadioML dataset for training our models, which contains a wide range of modulated signals recorded under different SNR conditions.
 -The system uses Convolutional Neural Networks (CNNs) to learn patterns from spectrograms of signals.
 -To improve explainability, we apply Grad-CAM visualizations, which highlight the parts of the spectrogram that influenced the model’s decision.
 
-##WORKFLOW
+## WORKFLOW
 -Raw IQ data from the RadioML dataset is converted into spectrogram images, capturing the time-frequency representation of signals.
 -The Router CNN identifies the broad signal family from the spectrogram.
 -Corresponding Specialized CNN refines the classification within the identified family.
@@ -18,7 +18,7 @@ A Deep Learning model for real-time wireless signal classification
 - `grad_cam_router.py` - Generates Grad-CAM visualizations.
 - `specialised*.py` - Specialist CNNs for fine-grained modulation classification.
 
-##FEATURES
+## FEATURES
 - Converts wireless signals into spectrogram images for visual pattern recognition.
 - Uses CNNs for high accuracy in signal classification.
 - Handles noisy and jamming/spoofing signals with robustness.
@@ -34,7 +34,7 @@ A Deep Learning model for real-time wireless signal classification
 -GradCam
 -MATLAB
 
-##Applications
+## Applications
 -Real-time wireless spectrum monitoring for managing congested frequency bands.
 -Cognitive radio systems enabling adaptive interference avoidance.
 -Defense and signal intelligence for identifying unknown transmissions.
