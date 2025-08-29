@@ -2,11 +2,13 @@ import numpy as np
 from full_data_extract import family_X, family_Y, len_family
 from jamming_functions import add_random_jamming
 
+
 def generate_mixed_signal(families, family_X, indices):
     sig = family_X[families[0]][indices]
     for idx, fam in enumerate(families[1:], start=1):
         sig = sig + family_X[fam][indices[idx]]
     return sig
+
 
 def create_signal_dataset_with_jam(
     pure, mix_2, mix_3, mix_4,
@@ -100,7 +102,6 @@ def create_signal_dataset_with_jam(
                     "meta": {"type": mix_key}
                 })
 
-                
                 for _ in range(n_jammed_per-1):
                     new_components = []
                     new_jam_flags = []
@@ -138,11 +139,64 @@ def create_signal_dataset_with_jam(
 
     return dataset_samples
 
-# --- Generate dataset ---
+
+def organize_jammed_signals_by_family(dataset_samples):
+    """
+    Convert dataset_samples list into X-style dictionary organized by family,
+    similar to generate_input_data.py format
+    """
+    family_names = ['analog', 'phase', 'qam', 'apsk']
+    
+    # Initialize dictionary to hold signals by family
+    X_jammed = {family: [] for family in family_names}
+    
+    for sample in dataset_samples:
+        if sample['jam_flag'] == 1:  # Only jammed signals
+            # For pure signals, use the single family
+            if len(sample['families']) == 1:
+                family = sample['families'][0] 
+                X_jammed[family].append(sample['iq'])
+            
+            # For mixed signals, assign to first family in the list
+            # (or implement your own assignment logic)
+            else:
+                primary_family = sample['families'][0]  
+                X_jammed[primary_family].append(sample['iq'])
+    
+    # Convert lists to numpy arrays
+    for family in family_names:
+        X_jammed[family] = np.array(X_jammed[family])
+        print(f"X_jammed['{family}'] shape: {X_jammed[family].shape}")
+    
+    return X_jammed
+
+
+# --- Generate dataset with balanced signal counts for 3-class classification ---
+# Using same proportions as clean dataset to ensure balanced classification
+# Total per family = 65536 (same as clean dataset)
+
 dataset_samples = create_signal_dataset_with_jam(
-    pure=100, mix_2=50, mix_3=50, mix_4=50
+    pure=9832,      # 15% - matches clean dataset proportions
+    mix_2=16384,    # 25% 
+    mix_3=19660,    # 30%
+    mix_4=19660,    # 30%
+    n_jammed_per=1,
+    selective_jam_prob=0.5
 )
+
+# Create the X_jammed dictionary for spectrogram extraction
+X_jammed = organize_jammed_signals_by_family(dataset_samples)
+
 print("Dataset generation complete.")
 print(f"Total signals created: {len(dataset_samples)}")
+print(f"Jammed signals by family:")
+for family, signals in X_jammed.items():
+    print(f"  {family}: {len(signals)} jammed signals")
 
-
+# Summary statistics
+total_clean = sum(len(dataset_samples) for sample in dataset_samples if sample['jam_flag'] == 0)
+total_jammed = sum(len(X_jammed[family]) for family in X_jammed.keys())
+print(f"\nDataset Balance:")
+print(f"Clean signals: {total_clean}")  
+print(f"Jammed signals: {total_jammed}")
+print(f"Total signals: {len(dataset_samples)}")
