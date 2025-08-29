@@ -7,7 +7,7 @@ A Deep Learning model for real-time wireless signal classification
 -To improve explainability, we apply Grad-CAM visualizations, which highlight the parts of the spectrogram that influenced the model’s decision.
 
 ## WORKFLOW
--Raw IQ data from the RadioML dataset is converted into spectrogram images, capturing the time-frequency representation of signals.
+- Raw IQ data from the RadioML dataset is converted into spectrogram images, capturing the time-frequency representation of signals.
 -The Router CNN identifies the broad signal family from the spectrogram.
 -Corresponding Specialized CNN refines the classification within the identified family.
 -Grad-CAM visualizations are applied to highlight important spectrogram regions influencing the model’s decisions.
