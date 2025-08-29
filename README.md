@@ -13,7 +13,11 @@ A Deep Learning model for real-time wireless signal classification
 - Grad-CAM visualizations are applied to highlight important spectrogram regions influencing the model’s decisions.
 
 ## PROJECT STRUCTURE
-- `generate_input_data.py` - Simulate and create spectrograms from wireless signals.
+- `full_data_extract.py` – Load and organize raw IQ signals and labels from RadioML into family-wise datasets.
+- `generate_input_data.py` – Simulate pure and mixed wireless signals, prepare multi-hot labels, and create training inputs.
+- `generate_jammed_dataset.py` – Add jamming interference to pure and mixed signals, creating realistic jammed datasets.
+- `jamming_functions.py` – Implements different jamming techniques for dataset augmentation.
+- `spectrogram_extract.py` – Convert IQ signals to spectrogram images for CNN model inputs.
 - `routerCnn.py` - Main CNN for signal family classification.
 - `grad_cam_router.py` - Generates Grad-CAM visualizations.
 - `specialised*.py` - Specialist CNNs for fine-grained modulation classification.
