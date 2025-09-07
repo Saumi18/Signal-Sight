@@ -16,10 +16,7 @@ for family in Y_router:
 
 full_dataset = ConcatDataset(datasets)
 
-
-train_size = len(full_dataset)
-
-train_dataset, val_dataset, test_dataset = random_split(full_dataset, [train_size])
+train_dataset= full_dataset
 
 print("Calculating global min and max from the training set...")
 
