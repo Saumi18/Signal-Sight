@@ -36,13 +36,15 @@ def add_random_spoofing(signal, Fs):
         spoofed_signal = sig_complex + false_flag + noise
 
     elif spoof_type == 'signal_injection':
-        # Inject a burst signal at a random location
-        burst_len = int(Fs * np.random.uniform(0.001, 0.01)) # 1-10 ms burst
+        burst_len = int(Fs * np.random.uniform(0.001, 0.01))
+        if burst_len >= N:
+            burst_len = max(1, N - 1)
         start_idx = np.random.randint(0, N - burst_len)
         burst_ampl = np.sqrt(spoofer_power) * np.random.uniform(0.5, 1.0)
         burst = burst_ampl * (np.random.normal(0, 1, burst_len) + 1j * np.random.normal(0, 1, burst_len))
         spoofed_signal = np.copy(sig_complex)
         spoofed_signal[start_idx:start_idx + burst_len] += burst
+
 
     elif spoof_type == 'delayed_signal':
         # Add a delayed, phase-shifted version of the signal
