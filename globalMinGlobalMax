@@ -1,0 +1,42 @@
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, ConcatDataset, random_split
+
+
+from data_gen import FamSpectDataset      
+from data_augmentation import Y_router 
+
+datasets = []
+for family in Y_router:
+    folder_path = f'log_spectrograms/{family}'  
+    labels = Y_router[family]
+    #Load data without the final [0,1] scaling for this calculation
+    dataset = FamSpectDataset(folder_path=folder_path, labels=labels, transform=None)
+    datasets.append(dataset)
+
+full_dataset = ConcatDataset(datasets)
+
+
+train_size = len(full_dataset)
+
+train_dataset, val_dataset, test_dataset = random_split(full_dataset, [train_size])
+
+print("Calculating global min and max from the training set...")
+
+global_min = float('inf')
+global_max = float('-inf')
+
+
+temp_loader = DataLoader(train_dataset, batch_size=64, shuffle=False)
+
+for inputs, labels in temp_loader:
+    batch_min = torch.min(inputs)
+    batch_max = torch.max(inputs)
+    
+    if batch_min < global_min:
+        global_min = batch_min
+    if batch_max > global_max:
+        global_max = batch_max
+
+print(f"Global Min: {global_min.item()}")
+print(f"Global Max: {global_max.item()}")
