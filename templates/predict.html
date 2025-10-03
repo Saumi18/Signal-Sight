@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Classifier</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        .left-panel {
+            flex: 1.5;
+            min-width: 400px;
+        }
+        .right-panel {
+            flex: 2;
+            display: flex;
+            gap: 20px;
+            border-left: 1px solid #dee2e6;
+            padding-left: 30px;
+            min-width: 400px;
+        }
+        .image-container {
+            flex: 1;
+            text-align: center;
+        }
+        h1, h2 {
+            color: #343a40;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
+        .image-container img {
+            max-width: 100%;
+            border: 1px solid #dee2e6;
+            background-color: white;
+            image-rendering: pixelated; /* Ensures spectrogram pixels are sharp */
+        }
+        .placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Signal Classifier</h1>
+    <p>Paste signal data as a JSON array of I/Q pairs. Example: <code>[[0.1, -0.2], [0.3, -0.4], ...]</code></p>
+    
+    <div class="main-container">
+        <div class="left-panel">
+            <h2>Input Signal</h2>
+            <textarea id="signalInput" placeholder="Paste your I/Q data here..."></textarea>
+            <button onclick="getPrediction()">Classify Signal</button>
+            <h2>JSON Output</h2>
+            <pre id="resultOutput">Waiting for input...</pre>
+        </div>
+        <div class="right-panel">
+            <div class="image-container">
+                <h2>Generated Spectrogram</h2>
+                <div id="spectrogram-container">
+                    <div class="placeholder">Spectrogram will be displayed here.</div>
+                </div>
+            </div>
+            <div class="image-container">
+                <h2>Grad-CAM Heatmap</h2>
+                <div id="gradcam-container">
+                    <div class="placeholder">Model attention will be shown here.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function getPrediction() {
+            const outputElement = document.getElementById('resultOutput');
+            const spectrogramContainer = document.getElementById('spectrogram-container');
+            const gradcamContainer = document.getElementById('gradcam-container');
+            const signalText = document.getElementById('signalInput').value;
+
+            // Set loading states
+            outputElement.textContent = 'Processing...';
+            spectrogramContainer.innerHTML = '<div class="placeholder">Generating spectrogram...</div>';
+            gradcamContainer.innerHTML = '<div class="placeholder">Awaiting prediction...</div>';
+
+            try {
+                // Ensure input is not empty
+                if (!signalText.trim()) {
+                    throw new Error("Input signal data cannot be empty.");
+                }
+                const signalData = JSON.parse(signalText);
+                
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal: signalData })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                // Display the JSON output (excluding the large image data strings)
+                const textResult = {...result};
+                delete textResult.spectrogram_image;
+                delete textResult.gradcam_image;
+                outputElement.textContent = JSON.stringify(textResult, null, 2);
+
+                // Display the spectrogram image
+                let specImg = document.createElement('img');
+                specImg.src = 'data:image/png;base64,' + result.spectrogram_image;
+                spectrogramContainer.innerHTML = ''; // Clear placeholder
+                spectrogramContainer.appendChild(specImg);
+                
+                // Display the Grad-CAM image
+                if (result.gradcam_image) {
+                    let gradcamImg = document.createElement('img');
+                    gradcamImg.src = 'data:image/png;base64,' + result.gradcam_image;
+                    gradcamContainer.innerHTML = ''; // Clear placeholder
+                    gradcamContainer.appendChild(gradcamImg);
+                } else {
+                    gradcamContainer.innerHTML = '<div class="placeholder">Grad-CAM not available for this prediction.</div>';
+                }
+
+            } catch (error) {
+                const errorMessage = 'Error: ' + error.message + '\n\nPlease check your input data format and server console for more details.';
+                outputElement.textContent = errorMessage;
+                spectrogramContainer.innerHTML = '<div class="placeholder">Failed to generate spectrogram.</div>';
+                gradcamContainer.innerHTML = '<div class="placeholder">Failed to generate Grad-CAM.</div>';
+            }
+        }
+    </script>
+</body>
+</html>

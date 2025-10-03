@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Signal Classifier</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        textarea { width: 100%; height: 200px; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Signal Classifier</h1>
+    <p>Paste your signal data as a JSON array of I/Q pairs. For example: [[0.1, -0.2], [0.3, -0.4], ...]</p>
+    <textarea id="signalInput" placeholder="[[0.1, -0.2], [0.3, -0.4]]"></textarea>
+    <button onclick="getPrediction()">Classify Signal</button>
+    <h2>Result:</h2>
+    <pre id="resultOutput">Waiting for input...</pre>
+
+    <script>
+        async function getPrediction() {
+            const outputElement = document.getElementById('resultOutput');
+            const signalText = document.getElementById('signalInput').value;
+            outputElement.textContent = 'Processing...';
+
+            try {
+                const signalData = JSON.parse(signalText);
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signal: signalData })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                outputElement.textContent = JSON.stringify(result, null, 2);
+
+            } catch (error) {
+                outputElement.textContent = 'Error: ' + error.message + '\n\nPlease ensure your input is a valid JSON array.';
+            }
+        }
+    </script>
+</body>
+</html>
