@@ -1,182 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signal Classifier</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-            color: #212529;
-        }
-        .main-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-        .left-panel {
-            flex: 1.5;
-            min-width: 400px;
-        }
-        .right-panel {
-            flex: 2;
-            display: flex;
-            gap: 20px;
-            border-left: 1px solid #dee2e6;
-            padding-left: 30px;
-            min-width: 400px;
-        }
-        .image-container {
-            flex: 1;
-            text-align: center;
-        }
-        h1, h2 {
-            color: #343a40;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 5px;
-            margin-top: 0;
-        }
-        textarea {
-            width: 100%;
-            height: 250px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            padding: 10px;
-            font-family: monospace;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        pre {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 14px;
-        }
-        .image-container img {
-            max-width: 100%;
-            border: 1px solid #dee2e6;
-            background-color: white;
-            image-rendering: pixelated; /* Ensures spectrogram pixels are sharp */
-        }
-        .placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            background-color: #e9ecef;
-            border-radius: 5px;
-            color: #6c757d;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignalSight - Prediction</title>
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        background: linear-gradient(135deg, #28bce5, #053546);
+        min-height: 100vh;
+        background-size: cover;
+        background-repeat: no-repeat;
+        position: relative;
+    }
+
+    body::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: url('https://www.transparenttextures.com/patterns/cubes.png') repeat;
+        opacity: 0.08;
+        top: 0;
+        left: 0;
+        z-index: 0;
+    }
+
+    .navbar {
+        background: rgba(31, 41, 55, 0.85) !important;
+        backdrop-filter: blur(5px);
+    }
+
+    .navbar-brand, .nav-link {
+        color: #fff !important;
+    }
+
+    .container {
+        margin-top: 100px;
+        position: relative;
+        z-index: 1;
+        max-width: 1400px;
+    }
+
+    .card {
+        border-radius: 20px;
+        padding: 25px;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        overflow: visible;
+    }
+
+    .card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        background: rgba(255, 255, 255, 1);
+    }
+
+    h2 {
+        background: linear-gradient(45deg, #000000, #034f58);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 20px;
+        font-size: 3rem;
+    }
+
+    p {
+        color: #333;
+        font-size: 1rem;
+    }
+
+    .output-card img {
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+        margin: 10px auto;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        transition: transform 0.3s, opacity 0.5s ease-in;
+        opacity: 0;
+        display: block;
+        background: #000;
+    }
+
+    .output-card img:hover {
+        transform: scale(1.02);
+        box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+    }
+
+    .output-card img.loaded {
+        opacity: 1;
+    }
+    
+    .overlay-container {
+        position: relative;
+        width: 100%;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-top: 10px;
+    }
+
+    .overlay-container img {
+        width: 100%;
+        height: auto;
+        transition: opacity 0.5s ease-in;
+        opacity: 0;
+    }
+    
+    .overlay-container img.loaded {
+        opacity: 1;
+    }
+    
+    #gradcamOverlay {
+        mix-blend-mode: screen;
+        opacity: 0.7;
+    }
+    
+    #gradcamOverlay.loaded {
+        opacity: 0.7;
+    }
+
+    .signal-info {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .signal-info h4 {
+        color: #f3f3f3;
+        font-weight: 600;
+    }
+
+    .btn-secondary {
+        background: linear-gradient(45deg, #3566ca, #4c41e2);
+        border: none;
+        font-weight: 500;
+        transition: all 0.3s;
+        margin-top: 20px;
+    }
+
+    .btn-secondary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    footer {
+        text-align: center;
+        padding: 20px;
+        color: #fff;
+        margin-top: 50px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .loading-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        color: #666;
+    }
+
+    .badge {
+        font-size: 0.9em;
+        padding: 8px 15px;
+    }
+
+</style>
 </head>
 <body>
-    <h1>Signal Classifier</h1>
-    <p>Paste signal data as a JSON array of I/Q pairs. Example: <code>[[0.1, -0.2], [0.3, -0.4], ...]</code></p>
-    
-    <div class="main-container">
-        <div class="left-panel">
-            <h2>Input Signal</h2>
-            <textarea id="signalInput" placeholder="Paste your I/Q data here..."></textarea>
-            <button onclick="getPrediction()">Classify Signal</button>
-            <h2>JSON Output</h2>
-            <pre id="resultOutput">Waiting for input...</pre>
-        </div>
-        <div class="right-panel">
-            <div class="image-container">
-                <h2>Generated Spectrogram</h2>
-                <div id="spectrogram-container">
-                    <div class="placeholder">Spectrogram will be displayed here.</div>
-                </div>
-            </div>
-            <div class="image-container">
-                <h2>Grad-CAM Heatmap</h2>
-                <div id="gradcam-container">
-                    <div class="placeholder">Model attention will be shown here.</div>
-                </div>
-            </div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">SignalSight</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            </ul>
         </div>
     </div>
+</nav>
 
-    <script>
-        async function getPrediction() {
-            const outputElement = document.getElementById('resultOutput');
-            const spectrogramContainer = document.getElementById('spectrogram-container');
-            const gradcamContainer = document.getElementById('gradcam-container');
-            const signalText = document.getElementById('signalInput').value;
+<!-- Main Container -->
+<div class="container">
 
-            // Set loading states
-            outputElement.textContent = 'Processing...';
-            spectrogramContainer.innerHTML = '<div class="placeholder">Generating spectrogram...</div>';
-            gradcamContainer.innerHTML = '<div class="placeholder">Awaiting prediction...</div>';
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h2>SignalSight: Prediction Results</h2>
+        <p class="text-muted">Now showing: Spectrogram, Grad-CAM heatmap, and their overlay for the classified signal</p>
+    </div>
 
-            try {
-                // Ensure input is not empty
-                if (!signalText.trim()) {
-                    throw new Error("Input signal data cannot be empty.");
-                }
-                const signalData = JSON.parse(signalText);
-                
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ signal: signalData })
-                });
+    <!-- Signal Classification Info -->
+    <div class="signal-info">
+        <h4 id="signalType">Classification Type: <span class="badge bg-primary" id="typeBadge">-</span></h4>
+        <h4 id="signalName"><span id="modulationText">-</span></h4>
+    </div>
 
-                const result = await response.json();
+    <!-- Outputs -->
+    <div class="row mt-4 g-4">
 
-                if (!response.ok) {
-                    throw new Error(result.error || `HTTP error! Status: ${response.status}`);
-                }
+        <!-- Spectrogram -->
+        <div class="col-12">
+            <div class="card p-3 output-card text-center">
+                <h5>Spectrogram</h5>
+                <div id="spectrogramContainer">
+                    <div class="loading-placeholder">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                // Display the JSON output (excluding the large image data strings)
-                const textResult = {...result};
-                delete textResult.spectrogram_image;
-                delete textResult.gradcam_image;
-                outputElement.textContent = JSON.stringify(textResult, null, 2);
+        <!-- Grad-CAM -->
+        <div class="col-12">
+            <div class="card p-3 output-card text-center">
+                <h5>Grad-CAM Heatmap</h5>
+                <div id="gradcamContainer">
+                    <div class="loading-placeholder">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                // Display the spectrogram image
-                let specImg = document.createElement('img');
-                specImg.src = 'data:image/png;base64,' + result.spectrogram_image;
-                spectrogramContainer.innerHTML = ''; // Clear placeholder
-                spectrogramContainer.appendChild(specImg);
-                
-                // Display the Grad-CAM image
-                if (result.gradcam_image) {
-                    let gradcamImg = document.createElement('img');
-                    gradcamImg.src = 'data:image/png;base64,' + result.gradcam_image;
-                    gradcamContainer.innerHTML = ''; // Clear placeholder
-                    gradcamContainer.appendChild(gradcamImg);
-                } else {
-                    gradcamContainer.innerHTML = '<div class="placeholder">Grad-CAM not available for this prediction.</div>';
-                }
+        <!-- Overlay -->
+        <div class="col-12" id="overlaySection">
+            <div class="card p-3 output-card text-center">
+                <h5>Overlay (Spectrogram + Grad-CAM)</h5>
+                <div class="overlay-container" style="position: relative; display: inline-block; width: 100%;">
+                    <img id="spectrogramOverlay" alt="Spectrogram Base" style="position: relative; display: block; width: 100%; height: auto;">
+                    <img id="gradcamOverlay" alt="Grad-CAM Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; mix-blend-mode: screen; opacity: 0.7; object-fit: contain;">
+                </div>
+            </div>
+        </div>
 
-            } catch (error) {
-                const errorMessage = 'Error: ' + error.message + '\n\nPlease check your input data format and server console for more details.';
-                outputElement.textContent = errorMessage;
-                spectrogramContainer.innerHTML = '<div class="placeholder">Failed to generate spectrogram.</div>';
-                gradcamContainer.innerHTML = '<div class="placeholder">Failed to generate Grad-CAM.</div>';
-            }
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center">
+        <a href="/" class="btn btn-secondary">Classify Another Signal</a>
+    </div>
+</div>
+
+<footer>
+    &copy; 2025 SignalSight. All rights reserved.
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JS to populate outputs -->
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    // Get prediction data from sessionStorage
+    const predictDataString = sessionStorage.getItem('predictData');
+    
+    if (!predictDataString) {
+        alert('No prediction data found. Please classify a signal first.');
+        window.location.href = '/';
+        return;
+    }
+
+    let response;
+    try {
+        response = JSON.parse(predictDataString);
+    } catch (e) {
+        alert('Error loading prediction data. Please try again.');
+        window.location.href = '/';
+        return;
+    }
+
+    console.log('Response data:', response);
+
+    // Update classification type badge
+    const predictionType = response.prediction_type || 'Unknown';
+    document.getElementById('typeBadge').textContent = predictionType;
+    
+    // Define modulation families
+    const MODULATION_FAMILIES = {
+        'AM-SSB-WC': 'Analog',
+        'AM-SSB-SC': 'Analog', 
+        'AM-DSB-WC': 'Analog',
+        'AM-DSB-SC': 'Analog',
+        'FM': 'Analog',
+        'BPSK': 'Phase',
+        'QPSK': 'Phase',
+        '8PSK': 'Phase',
+        '16PSK': 'Phase',
+        '32PSK': 'Phase',
+        'OQPSK': 'Phase',
+        'GMSK': 'Phase',
+        'OOK': 'QAM/ASK',
+        '4ASK': 'QAM/ASK',
+        '8ASK': 'QAM/ASK',
+        '16QAM': 'QAM/ASK',
+        '32QAM': 'QAM/ASK',
+        '64QAM': 'QAM/ASK',
+        '128QAM': 'QAM/ASK',
+        '256QAM': 'QAM/ASK',
+        '16APSK': 'APSK',
+        '32APSK': 'APSK',
+        '64APSK': 'APSK',
+        '128APSK': 'APSK'
+    };
+    
+    // Update modulation name with family info
+    let modulationText = '';
+    if (response.prediction_type === 'Mixed' && response.modulations) {
+        const modulationsWithFamilies = response.modulations.map(mod => {
+            const family = MODULATION_FAMILIES[mod] || 'Unknown';
+            return `<span class="badge bg-success">"${mod}" from "${family}" family</span>`;
+        });
+        modulationText = modulationsWithFamilies.join(' + ');
+    } else if (response.modulation) {
+        const family = MODULATION_FAMILIES[response.modulation] || 'Unknown';
+        modulationText = `<span class="badge bg-success" style="font-size: 1.1em; padding: 10px 20px;">"${response.modulation}" from "${family}" family</span>`;
+    } else {
+        modulationText = '<span class="badge bg-secondary">Unknown</span>';
+    }
+    
+    document.getElementById('modulationText').innerHTML = modulationText;
+
+    // Load and display spectrogram
+    if (response.spectrogram_image) {
+        console.log('Loading spectrogram...');
+        const spectrogramImg = document.createElement('img');
+        spectrogramImg.src = `data:image/png;base64,${response.spectrogram_image}`;
+        spectrogramImg.alt = 'Spectrogram';
+        
+        spectrogramImg.onload = () => {
+            console.log('Spectrogram loaded!');
+            spectrogramImg.classList.add('loaded');
+        };
+        spectrogramImg.onerror = (err) => {
+            console.error('Spectrogram error:', err);
+            document.getElementById('spectrogramContainer').innerHTML = 
+                '<p class="text-danger">Error loading spectrogram</p>';
+        };
+        
+        document.getElementById('spectrogramContainer').innerHTML = '';
+        document.getElementById('spectrogramContainer').appendChild(spectrogramImg);
+
+        // Set overlay spectrogram
+        const overlaySpec = document.getElementById('spectrogramOverlay');
+        if (overlaySpec) {
+            overlaySpec.src = `data:image/png;base64,${response.spectrogram_image}`;
+            overlaySpec.onload = () => {
+                console.log('Overlay spectrogram loaded!');
+                overlaySpec.classList.add('loaded');
+            };
         }
-    </script>
+    } else {
+        document.getElementById('spectrogramContainer').innerHTML = 
+            '<p class="text-muted">No spectrogram available</p>';
+    }
+
+    // Load and display Grad-CAM
+    if (response.gradcam_image) {
+        console.log('Loading Grad-CAM...');
+        const gradcamImg = document.createElement('img');
+        gradcamImg.src = `data:image/png;base64,${response.gradcam_image}`;
+        gradcamImg.alt = 'Grad-CAM Heatmap';
+        
+        gradcamImg.onload = () => {
+            console.log('Grad-CAM loaded!');
+            gradcamImg.classList.add('loaded');
+        };
+        gradcamImg.onerror = (err) => {
+            console.error('Grad-CAM error:', err);
+            document.getElementById('gradcamContainer').innerHTML = 
+                '<p class="text-danger">Error loading Grad-CAM</p>';
+        };
+        
+        document.getElementById('gradcamContainer').innerHTML = '';
+        document.getElementById('gradcamContainer').appendChild(gradcamImg);
+
+        // Set overlay Grad-CAM
+        const overlayGrad = document.getElementById('gradcamOverlay');
+        if (overlayGrad) {
+            overlayGrad.src = `data:image/png;base64,${response.gradcam_image}`;
+            overlayGrad.onload = () => {
+                console.log('Overlay Grad-CAM loaded!');
+                overlayGrad.classList.add('loaded');
+            };
+        }
+    } else {
+        console.log('No Grad-CAM image');
+        document.getElementById('gradcamContainer').innerHTML = 
+            '<p class="text-muted">No Grad-CAM available<br><small>(Not generated for jammed signals)</small></p>';
+        
+        document.getElementById('overlaySection').style.display = 'none';
+    }
+});
+</script>
+
 </body>
 </html>
