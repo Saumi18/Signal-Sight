@@ -59,65 +59,34 @@ Pre-trained `.pth` model files located in `checkpoints/`:
 
 ## 🚀 How to Run the Project
 
-### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/your-username/Signal-Sight.git
-cd Signal-Sight
-2️⃣ Install Dependencies
-pip install -r requirements.txt
+### 1️⃣ Clone, Install & Start (single code block)
+    # Clone the repository
+    git clone https://github.com/your-username/Signal-Sight.git
+    cd Signal-Sight
 
-3️⃣ Verify Model Files
+    # Install dependencies
+    pip install -r requirements.txt
 
-Ensure all .pth models are inside the checkpoints/ directory.
+    # Start the Flask server
+    python app.py
 
-4️⃣ Start Flask Server
-python app.py
+### 2️⃣ Verify Model Files
+Ensure all `.pth` model files are present inside the `checkpoints/` directory:
+- `best_pure_cnn_model.pth`
+- `best_pure_mixed_model.pth`
+- `best_qam_specialist_model.pth`
+- `best_phase_specialist_model.pth`
+- `best_analog_specialist_model.pth`
+- `best_jamming_classifier_model.pth`
+- `best_router_model.pth`
 
-5️⃣ Access the Web Interface
-http://127.0.0.1:5500/Signal-Sight/templates/index.html
+### 3️⃣ Access the Web Interface
+Open your browser and go to:  
+`http://127.0.0.1:5500/Signal-Sight/templates/index.html`
 
-6️⃣ Classify a Signal
-
-Paste I/Q signal data (JSON format)
-
-Click Classify Signal
-
-View predicted modulation type + Grad-CAM heatmap
-
-📈 Project Architecture
-1️⃣ Input 1D I/Q Signal  
-2️⃣ Convert to Spectrogram  
-3️⃣ Route via SNR Classifier  
-4️⃣ Hierarchical CNN Inference  
-5️⃣ Predict Modulation Type  
-6️⃣ Generate Grad-CAM Heatmap  
-7️⃣ Display in Web UI  
-
-🏭 Industrial Applications
-
-🚗 Automotive – Secure V2X communication
-
-🛰 Defense – RF intelligence & jamming analysis
-
-🏬 IoT Security – Device spoof detection
-
-🏦 Financial Systems – Wireless spoof monitoring
-
-📡 Telecom – Real-time interference detection
-
-🌐 User Interface Highlights
-
-Flask-powered responsive web dashboard
-
-JSON input for signal upload
-
-Auto spectrogram visualization
-
-Grad-CAM heatmap overlays for interpretability
-
-Clean gradient UI cards for modern UX
+### 4️⃣ Classify a Signal
+- Paste your I/Q signal data (JSON array, e.g., `[0.1, 0.2, 0.3, ...]`) into the input box.  
+- Click **Classify Signal**.  
+- View the predicted modulation type plus the Grad-CAM heatmap for interpretability.
 
 
----
-
-.
