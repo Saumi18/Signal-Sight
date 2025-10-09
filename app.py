@@ -27,6 +27,8 @@ ANALOG_CLASS_NAMES = ['AM-SSB-WC', 'AM-SSB-SC', 'AM-DSB-WC', 'AM-DSB-SC', 'FM']
 PHASE_CLASS_NAMES = ['BPSK', 'QPSK', '8PSK', '16PSK', '32PSK']
 QAM_CLASS_NAMES = ['4ASK', '8ASK', '16QAM', '32QAM', '64QAM', '128QAM', '256QAM']
 
+families = ['analog', 'phase', 'qam']
+
 SPECIALIST_MAPPINGS = {
     'analog': (MODELS['analog'], ANALOG_CLASS_NAMES),
     'phase': (MODELS['phase'], PHASE_CLASS_NAMES),
@@ -168,12 +170,14 @@ def predict():
                 gradcam_img_b64 = generate_gradcam_overlay(heatmap, base_spectrogram)
                 
                 # Get predictions from all relevant specialists
-                for family in detected_families:
-                    specialist_model, specialist_classes = SPECIALIST_MAPPINGS[family]
-                    with torch.no_grad():
-                        output = specialist_model(model_input)
-                        idx = torch.argmax(output, dim=1).item()
-                        final_modulations.append(specialist_classes[idx])
+                for pred in router_preds:
+                    for family in families:
+                        if family in detected_families:
+                            specialist_model, specialist_classes = SPECIALIST_MAPPINGS[family]
+                            with torch.no_grad():
+                                output = specialist_model(model_input)
+                                idx = torch.argmax(output, dim=1).item()
+                                final_modulations.append(specialist_classes[idx])
 
             response = {
                 'prediction_type': 'Mixed',
