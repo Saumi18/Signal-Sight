@@ -43,6 +43,12 @@ It automates complex modulation recognition by converting 1D I/Q signals into 2D
 
 ---
 
+## Model Workflow
+
+![Model Workflow](images/model_workflow.png)
+
+---
+
 ## 🧠 Trained Models
 
 Pre-trained `.pth` model files located in `checkpoints/`:
@@ -83,6 +89,8 @@ Ensure all `.pth` model files are present inside the `checkpoints/` directory:
 ### 3️⃣ Access the Web Interface
 Open your browser and go to:  
 `http://127.0.0.1:5500/Signal-Sight/templates/index.html`
+
+![Frontend Demo](images/frontend_demo.png)
 
 ### 4️⃣ Classify a Signal
 - Paste your I/Q signal data (JSON array, e.g., `[0.1, 0.2, 0.3, ...]`) into the input box.  
