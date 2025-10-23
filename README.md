@@ -93,7 +93,7 @@ Open your browser and go to:
 ![Frontend Demo](images/frontend_demo.png)
 
 ### 4️⃣ Classify a Signal
-- Paste your I/Q signal data (JSON array, e.g., `[0.1, 0.2, 0.3, ...]`) into the input box.  
+- Upload your I/Q signal data in JSON format. 
 - Click **Classify Signal**.  
 - View the predicted modulation type plus the Grad-CAM heatmap for interpretability.
 
