@@ -145,10 +145,16 @@
     <div class="card text-center">
         <h2 class="fw-bold mb-3">SignalSight: Classifying Signals</h2>
         <p class="mb-4">
-            Enter your wireless signal data below and let our model classify it with state of the art methods. You will see the signal being processed with visual outputs...
+            Upload your wireless signal data as a JSON file and let our model classify it using state-of-the-art methods.
+            You will see the signal being processed with visual outputs...
         </p>
 
-        <textarea id="signalData" class="form-control mb-3" placeholder="Paste your signal data here as a JSON array, e.g., [0.1, 0.2, 0.3, ...]"></textarea>
+        <!-- File Upload Input -->
+        <div class="mb-3">
+            <input type="file" id="jsonFile" accept=".json" class="form-control" />
+            <small class="text-muted">Upload a JSON file containing your signal array (e.g., [0.1, 0.2, 0.3, ...] or [[I,Q], [I,Q], ...])</small>
+        </div>
+
         <button id="fetchBtn" class="btn btn-primary w-100 mb-3">Classify Signal</button>
 
         <!-- Error/Info Messages -->
@@ -179,81 +185,64 @@ function showMessage(message, type = 'danger') {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    
-    // Auto-dismiss after 5 seconds for non-error messages
-    if (type !== 'danger') {
-        setTimeout(() => {
-            messageBox.innerHTML = '';
-        }, 5000);
-    }
+    if (type !== 'danger') setTimeout(() => { messageBox.innerHTML = ''; }, 5000);
 }
 
 document.getElementById('fetchBtn').addEventListener('click', async () => {
     const loading = document.getElementById('loading');
     const fetchBtn = document.getElementById('fetchBtn');
     const messageBox = document.getElementById('messageBox');
-    let signalData = document.getElementById('signalData').value.trim();
+    const fileInput = document.getElementById('jsonFile');
 
-    // Clear previous messages
     messageBox.innerHTML = '';
 
-    if (!signalData) {
-        showMessage('Please enter signal data.');
+    if (fileInput.files.length === 0) {
+        showMessage('Please upload a JSON file containing signal data.');
         return;
     }
 
-    // Parse the input as JSON array
+    let signalDataText = '';
     try {
-        signalData = JSON.parse(signalData);
-        
-        // Validate it's an array
-        if (!Array.isArray(signalData)) {
+        const file = fileInput.files[0];
+        signalDataText = (await file.text()).trim();
+    } catch (err) {
+        showMessage('Error reading JSON file: ' + err.message);
+        return;
+    }
+
+    // Parse JSON and validate
+    let signalData;
+    try {
+        signalData = JSON.parse(signalDataText);
+
+        if (!Array.isArray(signalData))
             throw new Error('Data must be an array');
-        }
-        
-        // Check if it's I/Q pairs [[I,Q], [I,Q], ...] or flat array [val1, val2, ...]
+
         const isIQPairs = Array.isArray(signalData[0]);
-        
         if (isIQPairs) {
-            // Validate I/Q pairs format
-            if (!signalData.every(pair => 
-                Array.isArray(pair) && 
-                pair.length === 2 && 
-                typeof pair[0] === 'number' && 
-                typeof pair[1] === 'number' &&
+            if (!signalData.every(pair =>
+                Array.isArray(pair) && pair.length === 2 &&
+                typeof pair[0] === 'number' && typeof pair[1] === 'number' &&
                 !isNaN(pair[0]) && !isNaN(pair[1])
-            )) {
-                throw new Error('I/Q pairs must be [[I,Q], [I,Q], ...] with valid numbers');
-            }
-            
-            // Validate array length (pairs)
-            if (signalData.length < 5) {
+            )) throw new Error('I/Q pairs must be [[I,Q], [I,Q], ...] with valid numbers');
+
+            if (signalData.length < 5)
                 throw new Error('Signal too short (minimum 5 I/Q pairs required)');
-            }
-            if (signalData.length > 500000) {
+            if (signalData.length > 500000)
                 throw new Error('Signal too long (maximum 500K I/Q pairs allowed)');
-            }
         } else {
-            // Validate flat array format
-            if (!signalData.every(x => typeof x === 'number' && !isNaN(x))) {
+            if (!signalData.every(x => typeof x === 'number' && !isNaN(x)))
                 throw new Error('All elements must be valid numbers');
-            }
-            
-            // Validate array length (samples)
-            if (signalData.length < 10) {
+            if (signalData.length < 10)
                 throw new Error('Signal too short (minimum 10 samples required)');
-            }
-            if (signalData.length > 1000000) {
+            if (signalData.length > 1000000)
                 throw new Error('Signal too long (maximum 1M samples allowed)');
-            }
         }
-        
     } catch (err) {
         showMessage(`Invalid signal format: ${err.message}. Provide either flat array [0.1, 0.2, ...] or I/Q pairs [[I,Q], [I,Q], ...]`);
         return;
     }
 
-    // Show loading state
     loading.style.display = 'block';
     fetchBtn.disabled = true;
 
@@ -270,11 +259,7 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
         }
 
         const data = await response.json();
-
-        // Save response data in sessionStorage for results page
         sessionStorage.setItem('predictData', JSON.stringify(data));
-
-        // Redirect to results page (Flask route)
         window.location.href = '/results';
 
     } catch (error) {
@@ -283,13 +268,6 @@ document.getElementById('fetchBtn').addEventListener('click', async () => {
     } finally {
         loading.style.display = 'none';
         fetchBtn.disabled = false;
-    }
-});
-
-// Allow Enter key to trigger classification (when not in textarea)
-document.getElementById('signalData').addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'Enter') {
-        document.getElementById('fetchBtn').click();
     }
 });
 </script>
